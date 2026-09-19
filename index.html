@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STAX Bulk QR Code Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    <!-- Local libraries to be inlined by fastlane builder -->
+    <script src="jszip.min.js"></script>
+    <script src="qrious.min.js"></script>
+</head>
+<body>
+    <div class="glass-bg"></div>
+    <div class="container">
+        <header class="glass-panel">
+            <div class="brand">
+                <div class="logo-mark">⚡</div>
+                <h1>Bulk QR Code Generator</h1>
+            </div>
+            <div class="actions">
+                <button id="generateBtn" class="btn btn-primary">Generate QR Codes</button>
+                <button id="downloadBtn" class="btn btn-success" disabled>Download ZIP</button>
+            </div>
+        </header>
+
+        <main>
+            <div class="sidebar glass-panel">
+                <h3>Batch Input</h3>
+                <div class="field">
+                    <label for="batchInput">Paste Values (One per line)<br><span class="helper-text">Format: label|value or just value</span></label>
+                    <textarea id="batchInput" placeholder="wifi-card|WIFI:S:Home;T:WPA;P:secret;;&#10;menu-link|https://menu.com&#10;plain-text-value" rows="10"></textarea>
+                </div>
+
+                <h3>QR Settings</h3>
+                <div class="settings-grid">
+                    <div class="field">
+                        <label for="qrSize">Output Size (px)</label>
+                        <input type="number" id="qrSize" value="300" min="100" max="1000" step="50" />
+                    </div>
+                    <div class="field">
+                        <label for="qrLevel">Error Correction</label>
+                        <select id="qrLevel">
+                            <option value="L">L (Low - 7%)</option>
+                            <option value="M" selected>M (Medium - 15%)</option>
+                            <option value="Q">Q (Quartile - 25%)</option>
+                            <option value="H">H (High - 30%)</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="fgColor">Foreground Color</label>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="fgColor" value="#000000" />
+                            <input type="text" id="fgColorText" value="#000000" />
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="bgColor">Background Color</label>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="bgColor" value="#ffffff" />
+                            <input type="text" id="bgColorText" value="#ffffff" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-panel glass-panel">
+                <div class="pane-header">
+                    <h3>Generated QR Codes (<span id="countDisplay">0</span>)</h3>
+                    <span class="badge">Preview Grid</span>
+                </div>
+                <div class="grid-container" id="previewGrid">
+                    <div class="empty-state">
+                        <p>No QR codes generated yet. Paste values and click "Generate".</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="../shared/storefront.js"></script>
+    <script src="../shared/payment.js"></script>
+    <script type="module" src="app.js"></script>
+</body>
+</html>
