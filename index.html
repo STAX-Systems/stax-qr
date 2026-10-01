@@ -3,104 +3,151 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0a0b0e">
     <title>STAX Bulk QR Code Generator</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <!-- Local libraries to be inlined by fastlane builder -->
     <script src="jszip.min.js"></script>
     <script src="qrious.min.js"></script>
 </head>
 <body>
-    <div class="glass-bg"></div>
+    <div class="glass-bg" aria-hidden="true"></div>
     <div class="container">
-        <header class="glass-panel">
+        <header class="app-header glass-panel">
             <div class="brand">
-                <div class="logo-mark">⚡</div>
-                <h1>Bulk QR Code Generator</h1>
+                <div class="logo-mark" aria-hidden="true">⚡</div>
+                <div>
+                    <p class="eyebrow">STAX TOOLS / QR WORKBENCH</p>
+                    <h1>Bulk QR Code Generator</h1>
+                    <p class="header-subtitle">Create, customize, and package QR codes in one private workspace.</p>
+                </div>
             </div>
-            <div class="actions">
-                <button id="generateBtn" class="btn btn-primary">Generate QR Codes</button>
-                <button id="downloadBtn" class="btn btn-success" disabled>Download ZIP</button>
-                <button id="btn-export-svg" class="btn btn-pro" disabled>Export SVGs</button>
-                <button id="btn-export-avery" class="btn btn-pro" disabled>Export Avery PDF</button>
+            <div class="header-meta">
                 <span class="pro-badge" aria-live="polite">FREE</span>
+                <div class="privacy-badge" aria-label="100% in-browser and air-gapped">
+                    <span aria-hidden="true">🔒</span>
+                    <span>100% In-Browser &amp; Air-Gapped</span>
+                </div>
             </div>
         </header>
 
-        <main>
-            <div class="sidebar glass-panel">
-                <h3>Batch Input</h3>
-                <div class="field">
-                    <label for="batchInput">Paste Values (One per line)<br><span class="helper-text">Format: label|value or just value</span></label>
+        <main class="workbench-layout">
+            <section class="sidebar glass-card" aria-labelledby="workbench-title">
+                <div class="section-heading">
+                    <span class="section-index">01</span>
+                    <h2 id="workbench-title">Workbench Controls</h2>
+                </div>
+
+                <div class="field batch-field">
+                    <label for="batchInput">Batch input <span class="helper-text">One value per line · label|value or value</span></label>
                     <textarea id="batchInput" placeholder="wifi-card|WIFI:S:Home;T:WPA;P:secret;;&#10;menu-link|https://menu.com&#10;plain-text-value" rows="10"></textarea>
                 </div>
 
-                <h3>QR Settings</h3>
+                <div class="section-heading settings-heading">
+                    <span class="section-index">02</span>
+                    <h2>QR Settings</h2>
+                </div>
                 <div class="settings-grid">
                     <div class="field">
-                        <label for="qrSize">Output Size (px)</label>
-                        <input type="number" id="qrSize" value="300" min="100" max="1000" step="50" />
+                        <label for="qrSize">Output size <span class="helper-text">Pixels</span></label>
+                        <input type="number" id="qrSize" value="300" min="100" max="1000" step="50">
                     </div>
                     <div class="field">
-                        <label for="qrLevel">Error Correction</label>
+                        <label for="qrLevel">Error correction</label>
                         <select id="qrLevel">
-                            <option value="L">L (Low - 7%)</option>
-                            <option value="M" selected>M (Medium - 15%)</option>
-                            <option value="Q">Q (Quartile - 25%)</option>
-                            <option value="H">H (High - 30%)</option>
+                            <option value="L">L · Low (7%)</option>
+                            <option value="M" selected>M · Medium (15%)</option>
+                            <option value="Q">Q · Quartile (25%)</option>
+                            <option value="H">H · High (30%)</option>
                         </select>
                     </div>
                     <div class="field">
-                        <label for="fgColor">Foreground Color</label>
+                        <label for="fgColorText">Foreground color</label>
                         <div class="color-picker-wrapper">
-                            <input type="color" id="fgColor" value="#000000" />
-                            <input type="text" id="fgColorText" value="#000000" />
+                            <input type="color" id="fgColor" value="#000000" aria-label="Choose foreground color">
+                            <input type="text" id="fgColorText" value="#000000" aria-label="Foreground hex color">
                         </div>
                     </div>
                     <div class="field">
-                        <label for="bgColor">Background Color</label>
+                        <label for="bgColorText">Background color</label>
                         <div class="color-picker-wrapper">
-                            <input type="color" id="bgColor" value="#ffffff" />
-                            <input type="text" id="bgColorText" value="#ffffff" />
+                            <input type="color" id="bgColor" value="#ffffff" aria-label="Choose background color">
+                            <input type="text" id="bgColorText" value="#ffffff" aria-label="Background hex color">
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <div class="preview-panel glass-panel">
+                <div class="action-group" aria-label="QR code actions">
+                    <button id="generateBtn" class="btn btn-primary" type="button">Generate QR Codes</button>
+                    <button id="downloadBtn" class="btn btn-success" type="button" disabled>Download Free PNG Zip</button>
+                    <div class="pro-actions">
+                        <button id="btn-export-svg" class="btn btn-pro" type="button"><span class="pro-badge">PRO</span><span class="pro-label">Export Vector SVG Zip</span></button>
+                        <button id="btn-export-avery" class="btn btn-pro" type="button"><span class="pro-badge">PRO</span>Print Avery 5160 Sheet</button>
+                    </div>
+                </div>
+            </section>
+
+            <section class="preview-panel glass-card" id="qr-grid" aria-labelledby="preview-title">
                 <div class="pane-header">
-                    <h3>Generated QR Codes (<span id="countDisplay">0</span>)</h3>
-                    <span class="badge">Preview Grid</span>
+                    <div class="section-heading">
+                        <span class="section-index">03</span>
+                        <h2 id="preview-title">Live Output Stage</h2>
+                    </div>
+                    <div class="output-meta">
+                        <span class="count-badge"><span id="countDisplay">0</span> codes</span>
+                        <span class="badge">PREVIEW GRID</span>
+                    </div>
                 </div>
                 <div class="grid-container" id="previewGrid">
                     <div class="empty-state">
-                        <p>No QR codes generated yet. Paste values and click "Generate".</p>
+                        <span class="empty-mark" aria-hidden="true">▦</span>
+                        <p>Generated codes appear here</p>
+                        <span>Enter batch values, then generate your QR codes.</span>
                     </div>
                 </div>
-            </div>
+            </section>
         </main>
+
+        <footer class="app-footer">
+            <span class="footer-mark" aria-hidden="true">STAX</span>
+            <span>Your payload data stays on this device. Nothing is sent to a server.</span>
+        </footer>
     </div>
 
-    <div id="pro-modal" class="pro-modal" role="dialog" aria-modal="true" aria-labelledby="pro-modal-title" hidden>
-        <div class="pro-modal-panel glass-panel">
-            <button type="button" class="pro-modal-close" data-pro-dismiss aria-label="Close">&times;</button>
-            <h2 id="pro-modal-title">Unlock STAX QR Pro</h2>
-            <p>Enter your offline license key to unlock SVG export and Avery 5160 PDF sheets.</p>
-            <form id="license-form">
-                <label for="license-key">License key</label>
-                <input id="license-key" name="license-key" type="text" autocomplete="off"
-                    placeholder="STAX-QR-PAYLOAD-CHECKSUM" required>
-                <p id="license-error" class="license-error" role="alert" hidden></p>
-                <div class="pro-modal-actions">
-                    <button type="submit" class="btn btn-primary">Activate Pro</button>
-                    <button type="button" class="btn btn-secondary" data-pro-dismiss>Maybe later</button>
+    <div id="pro-modal" class="pro-modal modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pro-modal-title" hidden>
+        <div class="modal-card pro-modal-panel">
+            <div class="modal-header">
+                <div class="modal-title-group">
+                    <span class="pro-badge">PRO</span>
+                    <h2 id="pro-modal-title">STAX QR Pro Unlock</h2>
                 </div>
-            </form>
+                <button id="btn-close-modal" class="modal-close pro-modal-close" type="button" data-pro-dismiss aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p>Unlock <strong>Vector SVG exports</strong> for infinite-resolution output and <strong>Avery 5160 print sheets</strong> with an auto-paginated layout.</p>
+                <div class="price-banner">
+                    <span class="price">$4.99</span>
+                    <span>One-time payment <i aria-hidden="true">·</i> Lifetime access <i aria-hidden="true">·</i> No subscriptions</span>
+                </div>
+                <a id="stripe-checkout-link" href="https://buy.stripe.com/test_bulk_qr_pro_499" target="_blank" rel="noopener noreferrer" class="btn-stripe">
+                    Unlock Lifetime Access · $4.99
+                </a>
+                <form id="license-form" class="license-field">
+                    <label for="license-key">License key or receipt code</label>
+                    <div id="pro-license-key" class="license-actions">
+                        <input id="license-key" name="license-key" type="text" autocomplete="off" placeholder="STAX-QR-PAYLOAD-CHECKSUM" required>
+                        <button id="btn-activate-license" class="btn btn-pro" type="submit">Activate</button>
+                    </div>
+                    <p id="license-error" class="license-error" role="alert" hidden></p>
+                    <button id="btn-restore-license" class="restore-button" type="button">Restore purchase</button>
+                    <p id="license-validation-msg" class="license-message" aria-live="polite"></p>
+                    <div class="pro-modal-actions">
+                        <button type="button" class="btn btn-secondary" data-pro-dismiss>Maybe later</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-    
     <script src="../shared/storefront.js"></script>
     <script src="../shared/payment.js"></script>
     <script type="module" src="app.js"></script>

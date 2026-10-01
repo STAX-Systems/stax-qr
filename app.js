@@ -9,6 +9,8 @@ const proModal = document.getElementById('pro-modal');
 const licenseForm = document.getElementById('license-form');
 const licenseKeyInput = document.getElementById('license-key');
 const licenseError = document.getElementById('license-error');
+const restoreLicenseBtn = document.getElementById('btn-restore-license');
+const licenseValidationMessage = document.getElementById('license-validation-msg');
 const proBadge = document.querySelector('.pro-badge');
 
 const qrSizeInput = document.getElementById('qrSize');
@@ -111,6 +113,12 @@ licenseForm.addEventListener('submit', async event => {
 });
 
 updateProBadge();
+
+restoreLicenseBtn.addEventListener('click', () => {
+    licenseValidationMessage.textContent = isProUnlocked()
+        ? 'Pro is already active in this browser.'
+        : 'No saved Pro license was found in this browser. Enter your key to activate.';
+});
 
 function extractQRMatrix(canvas) {
     const context = canvas.getContext('2d', { willReadFrequently: true });
@@ -491,20 +499,20 @@ downloadBtn.addEventListener('click', () => {
             setTimeout(() => URL.revokeObjectURL(url), 1000);
             
             downloadBtn.disabled = false;
-            downloadBtn.textContent = 'Download ZIP';
+            downloadBtn.textContent = 'Download Free PNG Zip';
         })
         .catch((err) => {
             console.error("Failed to generate zip file", err);
             alert("Error exporting ZIP file.");
             downloadBtn.disabled = false;
-            downloadBtn.textContent = 'Download ZIP';
+            downloadBtn.textContent = 'Download Free PNG Zip';
         });
 });
 
 svgExportBtn.addEventListener('click', async () => {
     if (generatedQRs.length === 0 || !gateProFeature()) return;
     svgExportBtn.disabled = true;
-    svgExportBtn.textContent = 'Exporting...';
+    svgExportBtn.querySelector('.pro-label').textContent = 'Exporting...';
     try {
         const zip = new JSZip();
         generatedQRs.forEach(item => {
@@ -518,7 +526,7 @@ svgExportBtn.addEventListener('click', async () => {
         alert(`Error exporting SVG files: ${err.message}`);
     } finally {
         svgExportBtn.disabled = false;
-        svgExportBtn.textContent = 'Export SVGs';
+        svgExportBtn.querySelector('.pro-label').textContent = 'Export Vector SVG Zip';
     }
 });
 
