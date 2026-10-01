@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Container Background -->
+  <rect width="512" height="512" rx="112" fill="#08151a"/>
+  
+  <!-- Outer Bezel Frame -->
+  <rect x="14" y="14" width="484" height="484" rx="100" fill="none" stroke="#06b6d4" stroke-width="14" stroke-opacity="0.9"/>
+  
+  <!-- Central Icon Glyph (Centered around X=256, Y=210) -->
+  <g id="icon-layer" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Vector Curve & Control Arms -->
+    <path d="M 150 280 C 180 130, 332 130, 362 280" fill="none" stroke="#06b6d4" stroke-width="12"/>
+    <line x1="150" y1="280" x2="200" y2="150" stroke="#0891b2" stroke-width="6" stroke-dasharray="8 6"/>
+    <line x1="362" y1="280" x2="312" y2="150" stroke="#0891b2" stroke-width="6" stroke-dasharray="8 6"/>
+    
+    <!-- Tangent Handle Nodes -->
+    <circle cx="200" cy="150" r="10" fill="#22d3ee"/>
+    <circle cx="312" cy="150" r="10" fill="#22d3ee"/>
+    
+    <!-- Primary Anchor Nodes -->
+    <rect x="136" y="266" width="28" height="28" rx="4" fill="#08151a" stroke="#22d3ee" stroke-width="6"/>
+    <rect x="348" y="266" width="28" height="28" rx="4" fill="#08151a" stroke="#22d3ee" stroke-width="6"/>
+    
+    <!-- Precision Pen Tip Apex -->
+    <path d="M 256 120 L 280 180 L 256 225 L 232 180 Z" fill="#22d3ee"/>
+    <circle cx="256" cy="180" r="4" fill="#08151a"/>
+    <line x1="256" y1="180" x2="256" y2="225" stroke="#08151a" stroke-width="3"/>
+  </g>
+  
+  <!-- Lower Monogram Pill -->
+  <rect x="186" y="380" width="140" height="64" rx="16" fill="#0f2933" stroke="#06b6d4" stroke-width="6"/>
+  <text x="256" y="425" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace" 
+        font-size="34" 
+        font-weight="900" 
+        fill="#67e8f9" 
+        text-anchor="middle" 
+        letter-spacing="4">VEC</text>
+</svg>

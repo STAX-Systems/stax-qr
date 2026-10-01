@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <!-- Container Background -->
+  <rect width="512" height="512" rx="112" fill="#14120a"/>
+  
+  <!-- Outer Bezel Frame -->
+  <rect x="14" y="14" width="484" height="484" rx="100" fill="none" stroke="#eab308" stroke-width="14" stroke-opacity="0.9"/>
+  
+  <!-- Central Icon Glyph (Centered around X=256, Y=210) -->
+  <g id="icon-layer" fill="#eab308">
+    <!-- Top-Left Position Detection Pattern -->
+    <rect x="146" y="100" width="76" height="76" rx="12"/>
+    <rect x="162" y="116" width="44" height="44" rx="6" fill="#14120a"/>
+    <rect x="174" y="128" width="20" height="20" rx="3"/>
+
+    <!-- Top-Right Position Detection Pattern -->
+    <rect x="290" y="100" width="76" height="76" rx="12"/>
+    <rect x="306" y="116" width="44" height="44" rx="6" fill="#14120a"/>
+    <rect x="318" y="128" width="20" height="20" rx="3"/>
+
+    <!-- Bottom-Left Position Detection Pattern -->
+    <rect x="146" y="244" width="76" height="76" rx="12"/>
+    <rect x="162" y="260" width="44" height="44" rx="6" fill="#14120a"/>
+    <rect x="174" y="272" width="20" height="20" rx="3"/>
+
+    <!-- Data Matrix Modules -->
+    <rect x="242" y="100" width="28" height="28" rx="4"/>
+    <rect x="242" y="148" width="28" height="28" rx="4"/>
+    <rect x="242" y="196" width="28" height="28" rx="4"/>
+    <rect x="146" y="196" width="28" height="28" rx="4"/>
+    <rect x="194" y="196" width="28" height="28" rx="4"/>
+    <rect x="290" y="196" width="28" height="28" rx="4"/>
+    <rect x="338" y="196" width="28" height="28" rx="4"/>
+    <rect x="242" y="244" width="28" height="28" rx="4"/>
+    <rect x="290" y="244" width="28" height="28" rx="4"/>
+    <rect x="338" y="244" width="28" height="28" rx="4"/>
+    <rect x="242" y="292" width="28" height="28" rx="4"/>
+    <rect x="290" y="292" width="76" height="28" rx="4"/>
+  </g>
+  
+  <!-- Lower Monogram Pill -->
+  <rect x="186" y="380" width="140" height="64" rx="16" fill="#241e0a" stroke="#eab308" stroke-width="6"/>
+  <text x="256" y="425" 
+        font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, monospace" 
+        font-size="34" 
+        font-weight="900" 
+        fill="#fef08a" 
+        text-anchor="middle" 
+        letter-spacing="4">QR</text>
+</svg>
