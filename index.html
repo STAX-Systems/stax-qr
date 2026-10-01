@@ -23,6 +23,9 @@
             <div class="actions">
                 <button id="generateBtn" class="btn btn-primary">Generate QR Codes</button>
                 <button id="downloadBtn" class="btn btn-success" disabled>Download ZIP</button>
+                <button id="btn-export-svg" class="btn btn-pro" disabled>Export SVGs</button>
+                <button id="btn-export-avery" class="btn btn-pro" disabled>Export Avery PDF</button>
+                <span class="pro-badge" aria-live="polite">FREE</span>
             </div>
         </header>
 
@@ -78,6 +81,24 @@
                 </div>
             </div>
         </main>
+    </div>
+
+    <div id="pro-modal" class="pro-modal" role="dialog" aria-modal="true" aria-labelledby="pro-modal-title" hidden>
+        <div class="pro-modal-panel glass-panel">
+            <button type="button" class="pro-modal-close" data-pro-dismiss aria-label="Close">&times;</button>
+            <h2 id="pro-modal-title">Unlock STAX QR Pro</h2>
+            <p>Enter your offline license key to unlock SVG export and Avery 5160 PDF sheets.</p>
+            <form id="license-form">
+                <label for="license-key">License key</label>
+                <input id="license-key" name="license-key" type="text" autocomplete="off"
+                    placeholder="STAX-QR-PAYLOAD-CHECKSUM" required>
+                <p id="license-error" class="license-error" role="alert" hidden></p>
+                <div class="pro-modal-actions">
+                    <button type="submit" class="btn btn-primary">Activate Pro</button>
+                    <button type="button" class="btn btn-secondary" data-pro-dismiss>Maybe later</button>
+                </div>
+            </form>
+        </div>
     </div>
     
     <script src="../shared/storefront.js"></script>

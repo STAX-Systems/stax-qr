@@ -123,11 +123,121 @@ h1 {
     box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
+.btn-pro {
+    background: rgba(168, 85, 247, 0.15);
+    color: #e9d5ff;
+    border-color: rgba(192, 132, 252, 0.35);
+}
+
+.btn-pro:hover:not(:disabled) {
+    background: rgba(168, 85, 247, 0.28);
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: var(--secondary-color);
+    color: var(--text-color);
+    border-color: var(--border-color);
+}
+
+.pro-badge {
+    color: #cbd5e1;
+    font: 700 0.65rem 'JetBrains Mono', monospace;
+    letter-spacing: 0.08em;
+    padding: 0.35rem 0.55rem;
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+}
+
+.pro-badge.is-active {
+    color: #6ee7b7;
+    border-color: rgba(16, 185, 129, 0.55);
+    background: rgba(16, 185, 129, 0.1);
+}
+
 .btn:disabled {
     opacity: 0.4;
     cursor: not-allowed;
     box-shadow: none !important;
     transform: none !important;
+}
+
+.pro-modal[hidden] {
+    display: none;
+}
+
+.pro-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10;
+    display: grid;
+    place-items: center;
+    padding: 1rem;
+    background: rgba(2, 6, 23, 0.78);
+}
+
+.pro-modal-panel {
+    position: relative;
+    width: min(100%, 420px);
+    padding: 2rem;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+}
+
+.pro-modal-panel h2 {
+    margin: 0 2rem 0.75rem 0;
+}
+
+.pro-modal-panel p {
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.pro-modal-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.9rem;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 1.75rem;
+    cursor: pointer;
+}
+
+#license-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-top: 1.25rem;
+}
+
+#license-form label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+#license-key {
+    box-sizing: border-box;
+    width: 100%;
+    background: rgba(0, 0, 0, 0.3);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 0.75rem;
+    font: 0.8rem 'JetBrains Mono', monospace;
+}
+
+.license-error {
+    margin: 0;
+    color: #fca5a5 !important;
+    font-size: 0.85rem;
+}
+
+.pro-modal-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
 }
 
 main {
