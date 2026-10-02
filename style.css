@@ -45,6 +45,8 @@ button,
 input,
 select,
 textarea {
+  box-sizing: border-box;
+  min-width: 0;
   appearance: none;
   -webkit-appearance: none;
   font: inherit;
@@ -244,15 +246,19 @@ h1 {
   display: flex;
   align-items: end;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 8px;
   margin-top: 0.8rem;
 }
 
 .batch-toolbar {
-  display: grid;
-  grid-template-columns: minmax(90px, 1.4fr) minmax(76px, 0.8fr) minmax(76px, 0.8fr) auto auto;
+  display: flex;
   align-items: end;
-  gap: 0.55rem;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.batch-toolbar > .field {
+  flex: 1 1 110px;
 }
 
 .batch-toolbar .field {
@@ -576,6 +582,7 @@ input[type="color"]::-webkit-color-swatch {
 
 .btn {
   display: inline-flex;
+  min-width: 0;
   min-height: 44px;
   align-items: center;
   justify-content: center;
@@ -1172,14 +1179,6 @@ input[type="color"]::-webkit-color-swatch {
 
   .pro-actions {
     grid-template-columns: 1fr;
-  }
-
-  .batch-toolbar {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
-
-  .batch-toolbar .field:first-child {
-    grid-column: 1 / -1;
   }
 
   .batch-options {
