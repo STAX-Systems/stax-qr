@@ -68,21 +68,14 @@
                             <input type="text" id="fgColorText" value="#000000" aria-label="Foreground hex color">
                         </div>
                     </div>
-                    <div class="field">
-                        <label for="bgColorText">Background color</label>
-                        <div class="color-picker-wrapper">
-                            <input type="color" id="bgColor" value="#ffffff" aria-label="Choose background color">
-                            <input type="text" id="bgColorText" value="#ffffff" aria-label="Background hex color">
-                        </div>
-                    </div>
                 </div>
 
                 <div class="action-group" aria-label="QR code actions">
                     <button id="generateBtn" class="btn btn-primary" type="button">Generate QR Codes</button>
-                    <button id="downloadBtn" class="btn btn-success" type="button" disabled>Download Free PNG Zip</button>
+                    <button id="download-zip" class="btn btn-success" type="button" disabled>Download Free PNG Zip</button>
                     <div class="pro-actions">
-                        <button id="btn-export-svg" class="btn btn-pro" type="button"><span class="pro-badge">PRO</span><span class="pro-label">Export Vector SVG Zip</span></button>
-                        <button id="btn-export-avery" class="btn btn-pro" type="button"><span class="pro-badge">PRO</span>Print Avery 5160 Sheet</button>
+                        <button id="btn-export-svg" class="btn btn-pro" type="button" disabled><span class="pro-badge">PRO</span><span class="pro-label">Export Vector SVG Zip</span></button>
+                        <button id="btn-export-avery" class="btn btn-pro" type="button" disabled><span class="pro-badge">PRO</span>Print Avery 5160 Sheet</button>
                     </div>
                 </div>
             </section>
@@ -98,6 +91,7 @@
                         <span class="badge">PREVIEW GRID</span>
                     </div>
                 </div>
+                <p id="generationStatus" class="generation-status" role="status" aria-live="polite"></p>
                 <div class="grid-container" id="previewGrid">
                     <div class="empty-state">
                         <span class="empty-mark" aria-hidden="true">▦</span>

@@ -459,6 +459,21 @@ input[type="color"]::-webkit-color-swatch {
   border-bottom: 1px solid var(--surface-glass-border);
 }
 
+.generation-status {
+  min-height: 1.1rem;
+  margin: 0.65rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+.generation-status:empty {
+  display: none;
+}
+
+.generation-status.is-error {
+  color: #fda4af;
+}
+
 .output-meta {
   display: flex;
   align-items: center;
@@ -535,10 +550,10 @@ input[type="color"]::-webkit-color-swatch {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
+  align-items: stretch;
+  gap: 0.65rem;
   padding: 1rem;
-  background: rgba(8, 11, 16, 0.62);
+  background: var(--surface-glass-card);
   border: 1px solid var(--surface-glass-border);
   border-radius: var(--radius-md);
   transition: border-color 0.18s ease, transform 0.18s ease;
@@ -549,12 +564,24 @@ input[type="color"]::-webkit-color-swatch {
   border-color: rgba(0, 240, 255, 0.35);
 }
 
+.qr-image-container {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  place-items: center;
+  padding: 12px;
+  background: #ffffff;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
 .qr-card canvas {
-  max-width: 100%;
+  width: auto;
   height: auto;
-  padding: 4px;
-  background: #fff;
-  border-radius: 4px;
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  display: block;
+  margin: 0 auto;
 }
 
 .qr-info {
@@ -562,7 +589,7 @@ input[type="color"]::-webkit-color-swatch {
   width: 100%;
   flex-direction: column;
   gap: 0.3rem;
-  text-align: center;
+  text-align: left;
 }
 
 .qr-label,
@@ -570,6 +597,24 @@ input[type="color"]::-webkit-color-swatch {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.qr-download {
+  align-self: center;
+  padding: 0.4rem 0.65rem;
+  color: #bafaff;
+  border: 1px solid rgba(0, 240, 255, 0.24);
+  border-radius: var(--radius-sm);
+  font-size: 0.7rem;
+  font-weight: 650;
+  text-decoration: none;
+}
+
+.qr-download:hover,
+.qr-download:focus-visible {
+  color: #061013;
+  background: var(--accent-cyan);
+  outline: none;
 }
 
 .qr-label {

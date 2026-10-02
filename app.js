@@ -1,8 +1,9 @@
 const generateBtn = document.getElementById('generateBtn');
-const downloadBtn = document.getElementById('downloadBtn');
+const downloadBtn = document.getElementById('download-zip');
 const batchInput = document.getElementById('batchInput');
 const previewGrid = document.getElementById('previewGrid');
 const countDisplay = document.getElementById('countDisplay');
+const generationStatus = document.getElementById('generationStatus');
 const svgExportBtn = document.getElementById('btn-export-svg');
 const averyExportBtn = document.getElementById('btn-export-avery');
 const proModal = document.getElementById('pro-modal');
@@ -18,8 +19,6 @@ const qrLevelInput = document.getElementById('qrLevel');
 
 const fgColorInput = document.getElementById('fgColor');
 const fgColorTextInput = document.getElementById('fgColorText');
-const bgColorInput = document.getElementById('bgColor');
-const bgColorTextInput = document.getElementById('bgColorText');
 
 let generatedQRs = []; // Stores objects: { label, value, canvas, filename }
 const LICENSE_STORAGE_KEY = 'stax_qr_pro_unlocked';
@@ -325,7 +324,7 @@ function downloadBlob(blob, filename) {
     document.body.appendChild(anchor);
     anchor.click();
     anchor.remove();
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 // Sync color inputs
@@ -347,11 +346,23 @@ function syncColors(picker, text) {
 }
 
 syncColors(fgColorInput, fgColorTextInput);
-syncColors(bgColorInput, bgColorTextInput);
 
 function sanitizeFilename(name) {
     // Remove illegal filename characters
     return name.replace(/[\\\/:\*\?"<>\|]/g, "_").trim();
+}
+
+function setGenerationStatus(message, isError = false) {
+    generationStatus.textContent = message;
+    generationStatus.classList.toggle('is-error', isError);
+}
+
+function setExportButtonsDisabled(disabled) {
+    [downloadBtn, svgExportBtn, averyExportBtn].forEach(button => {
+        button.disabled = disabled;
+        if (disabled) button.setAttribute('disabled', '');
+        else button.removeAttribute('disabled');
+    });
 }
 
 generateBtn.addEventListener('click', () => {
@@ -360,9 +371,8 @@ generateBtn.addEventListener('click', () => {
     
     previewGrid.innerHTML = '';
     generatedQRs = [];
-    downloadBtn.disabled = true;
-    svgExportBtn.disabled = true;
-    averyExportBtn.disabled = true;
+    setExportButtonsDisabled(true);
+    setGenerationStatus('');
     
     if (lines.length === 0) {
         previewGrid.innerHTML = `
@@ -371,6 +381,7 @@ generateBtn.addEventListener('click', () => {
             </div>
         `;
         countDisplay.textContent = '0';
+        setGenerationStatus('Enter at least one value or label|value pair, then generate QR codes.', true);
         return;
     }
     
@@ -381,96 +392,131 @@ generateBtn.addEventListener('click', () => {
         activeLines = lines.slice(0, 100);
     }
     
-    countDisplay.textContent = activeLines.length.toString();
+    countDisplay.textContent = '0';
     
-    const size = parseInt(qrSizeInput.value) || 300;
+    const size = Math.min(1000, Math.max(100, Number.parseInt(qrSizeInput.value, 10) || 300));
     const level = qrLevelInput.value;
     const fgColor = fgColorInput.value;
-    const bgColor = bgColorInput.value;
     
     const filenameCounts = {};
-    
-    activeLines.forEach((line) => {
-        let label = '';
-        let value = '';
-        
-        if (line.includes('|')) {
-            const parts = line.split('|');
-            label = parts[0].trim();
-            value = parts.slice(1).join('|').trim(); // preserve inner pipes if value contains any
-        } else {
-            label = line;
-            value = line;
-        }
-        
-        // Handle empty values/labels
-        if (!value) return;
-        if (!label) label = value;
-        
-        // Sanitize and handle duplicate file names
-        let baseFilename = sanitizeFilename(label) || "qrcode";
-        let filename = baseFilename;
-        
-        if (filenameCounts[filename]) {
-            filenameCounts[filename]++;
-            filename = `${baseFilename}-${filenameCounts[filename]}`;
-        } else {
-            filenameCounts[filename] = 1;
-        }
-        
-        // Create Preview Card HTML
-        const card = document.createElement('div');
-        card.className = 'qr-card';
-        
-        const canvas = document.createElement('canvas');
-        card.appendChild(canvas);
-        
-        const info = document.createElement('div');
-        info.className = 'qr-info';
-        
-        const labelEl = document.createElement('span');
-        labelEl.className = 'qr-label';
-        labelEl.textContent = label;
-        labelEl.title = label;
-        
-        const valEl = document.createElement('span');
-        valEl.className = 'qr-val';
-        valEl.textContent = value;
-        valEl.title = value;
-        
-        info.appendChild(labelEl);
-        info.appendChild(valEl);
-        card.appendChild(info);
-        previewGrid.appendChild(card);
-        
-        // Generate QR code using QRious
-        try {
-            const qr = new QRious({
+
+    try {
+        activeLines.forEach((line) => {
+            let label = '';
+            let value = '';
+
+            if (line.includes('|')) {
+                const parts = line.split('|');
+                label = parts[0].trim();
+                value = parts.slice(1).join('|').trim();
+            } else {
+                label = line;
+                value = line;
+            }
+
+            if (!value) return;
+            if (!label) label = value;
+
+            const baseFilename = sanitizeFilename(label) || 'qrcode';
+            let filename = baseFilename;
+            if (filenameCounts[filename]) {
+                filenameCounts[filename]++;
+                filename = `${baseFilename}-${filenameCounts[filename]}`;
+            } else {
+                filenameCounts[filename] = 1;
+            }
+
+            const card = document.createElement('article');
+            card.className = 'qr-card';
+            const info = document.createElement('div');
+            info.className = 'qr-info';
+            const labelEl = document.createElement('span');
+            labelEl.className = 'qr-label';
+            labelEl.textContent = label;
+            labelEl.title = label;
+            const valEl = document.createElement('span');
+            valEl.className = 'qr-val';
+            valEl.textContent = value;
+            valEl.title = value;
+            info.appendChild(labelEl);
+            info.appendChild(valEl);
+            card.appendChild(info);
+
+            const imageContainer = document.createElement('div');
+            imageContainer.className = 'qr-image-container';
+            const canvas = document.createElement('canvas');
+            imageContainer.appendChild(canvas);
+            card.appendChild(imageContainer);
+
+            new QRious({
                 element: canvas,
                 value: value,
                 size: size,
                 level: level,
                 foreground: fgColor,
-                background: bgColor
+                background: '#ffffff'
             });
-            
-            generatedQRs.push({
+
+            const item = {
                 label: label,
                 value: value,
                 canvas: canvas,
                 filename: filename,
                 fgColor: fgColor,
-                bgColor: bgColor
+                bgColor: '#ffffff'
+            };
+            const downloadLink = document.createElement('a');
+            downloadLink.className = 'qr-download';
+            downloadLink.textContent = 'Save PNG';
+            downloadLink.href = canvas.toDataURL('image/png');
+            downloadLink.download = `${filename}.png`;
+            downloadLink.setAttribute('aria-label', `Save ${label} as PNG`);
+            card.appendChild(downloadLink);
+
+            canvas.tabIndex = 0;
+            canvas.setAttribute('role', 'button');
+            canvas.setAttribute('aria-label', `Download QR code for ${label}`);
+            canvas.addEventListener('keydown', event => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    downloadLink.click();
+                }
             });
-        } catch (err) {
-            console.error("Failed to generate QR for value: " + value, err);
-        }
-    });
-    
+            card.addEventListener('click', event => {
+                if (event.target !== downloadLink && !downloadLink.contains(event.target)) {
+                    downloadLink.click();
+                }
+            });
+
+            generatedQRs.push(item);
+            previewGrid.appendChild(card);
+        });
+    } catch (err) {
+        console.error('Failed to generate QR codes.', err);
+        generatedQRs = [];
+        previewGrid.innerHTML = `
+            <div class="empty-state">
+                <p>QR code generation failed.</p>
+                <span>Check the input and QR settings, then try again.</span>
+            </div>
+        `;
+        countDisplay.textContent = '0';
+        setGenerationStatus(`Could not generate the batch: ${err.message || 'Unknown error.'}`, true);
+        return;
+    }
+
+    countDisplay.textContent = generatedQRs.length.toString();
     if (generatedQRs.length > 0) {
-        downloadBtn.disabled = false;
-        svgExportBtn.disabled = false;
-        averyExportBtn.disabled = false;
+        setExportButtonsDisabled(false);
+        setGenerationStatus(`Generated ${generatedQRs.length} QR code${generatedQRs.length === 1 ? '' : 's'}.`);
+    } else {
+        previewGrid.innerHTML = `
+            <div class="empty-state">
+                <p>No valid QR values found.</p>
+                <span>Each label|value row must include a value after the pipe.</span>
+            </div>
+        `;
+        setGenerationStatus('No QR codes were generated. Add a value to each input row and try again.', true);
     }
 });
 
@@ -503,14 +549,15 @@ downloadBtn.addEventListener('click', () => {
         })
         .catch((err) => {
             console.error("Failed to generate zip file", err);
-            alert("Error exporting ZIP file.");
+            setGenerationStatus(`Could not create the PNG ZIP: ${err.message || 'Unknown error.'}`, true);
             downloadBtn.disabled = false;
             downloadBtn.textContent = 'Download Free PNG Zip';
         });
 });
 
 svgExportBtn.addEventListener('click', async () => {
-    if (generatedQRs.length === 0 || !gateProFeature()) return;
+    if (!gateProFeature()) return;
+    if (generatedQRs.length === 0) return;
     svgExportBtn.disabled = true;
     svgExportBtn.querySelector('.pro-label').textContent = 'Exporting...';
     try {
@@ -523,7 +570,7 @@ svgExportBtn.addEventListener('click', async () => {
         downloadBlob(content, 'qrcodes-svg.zip');
     } catch (err) {
         console.error('Failed to export SVG files.', err);
-        alert(`Error exporting SVG files: ${err.message}`);
+        setGenerationStatus(`Could not export SVG files: ${err.message || 'Unknown error.'}`, true);
     } finally {
         svgExportBtn.disabled = false;
         svgExportBtn.querySelector('.pro-label').textContent = 'Export Vector SVG Zip';
@@ -531,12 +578,13 @@ svgExportBtn.addEventListener('click', async () => {
 });
 
 averyExportBtn.addEventListener('click', () => {
-    if (generatedQRs.length === 0 || !gateProFeature()) return;
+    if (!gateProFeature()) return;
+    if (generatedQRs.length === 0) return;
     try {
         const pdf = buildAverySheetPdf(generatedQRs);
         downloadBlob(pdf, 'qrcodes-avery-5160.pdf');
     } catch (err) {
         console.error('Failed to export Avery PDF.', err);
-        alert(`Error exporting Avery PDF: ${err.message}`);
+        setGenerationStatus(`Could not export the Avery sheet: ${err.message || 'Unknown error.'}`, true);
     }
 });
