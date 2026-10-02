@@ -40,22 +40,34 @@
                 </div>
 
                 <div class="batch-field">
-                    <div class="batch-input-grid">
+                    <div class="batch-toolbar">
                         <div class="field">
-                            <label for="labelsInput">Labels / Filenames (Optional, one per line)</label>
-                            <textarea id="labelsInput" placeholder="wifi-card&#10;menu-link" rows="10"></textarea>
+                            <label for="autoLabelPrefix">Auto-label prefix</label>
+                            <input id="autoLabelPrefix" type="text" value="POS-" autocomplete="off">
                         </div>
                         <div class="field">
-                            <label for="payloadsInput">Target URLs / Data (Required, one per line)</label>
-                            <textarea id="payloadsInput" placeholder="WIFI:S:Home;T:WPA;P:secret;;&#10;https://menu.com" rows="10"></textarea>
+                            <label for="autoLabelStart">Starting number</label>
+                            <input id="autoLabelStart" type="number" value="1" min="0">
                         </div>
+                        <div class="field">
+                            <label for="autoLabelPadding">Zero padding</label>
+                            <input id="autoLabelPadding" type="number" value="0" min="0" max="12">
+                        </div>
+                        <button id="applyLabelsBtn" class="btn btn-secondary" type="button">Apply to All</button>
+                        <button id="clearEmptyRowsBtn" class="btn btn-secondary" type="button">Clear Empty Rows</button>
                     </div>
                     <div class="batch-options">
-                        <div class="field">
-                            <label for="labelPrefix">Label Prefix <span class="helper-text">Used when a label is missing</span></label>
-                            <input id="labelPrefix" type="text" value="qr-" autocomplete="off">
-                        </div>
-                        <span id="syncStatus" class="sync-status" role="status" aria-live="polite">0 URLs | 0 Labels (Ready)</span>
+                        <button id="rawPasteBtn" class="btn btn-secondary" type="button">Raw Paste</button>
+                        <button id="addRowBtn" class="btn btn-secondary" type="button">Add Row</button>
+                        <span id="syncStatus" class="sync-status" role="status" aria-live="polite">0 rows</span>
+                    </div>
+                    <div class="batch-grid-wrap">
+                        <table class="batch-grid-table">
+                            <thead>
+                                <tr><th scope="col">#</th><th scope="col">Label</th><th scope="col">URL / Payload</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Remove</span></th></tr>
+                            </thead>
+                            <tbody id="batch-grid" aria-label="QR code batch rows"></tbody>
+                        </table>
                     </div>
                 </div>
 
@@ -67,6 +79,14 @@
                     <div class="field">
                         <label for="qrSize">Output size <span class="helper-text">Pixels</span></label>
                         <input type="number" id="qrSize" value="300" min="100" max="1000" step="50">
+                    </div>
+                    <div class="field">
+                        <label for="validationMode">Validation mode</label>
+                        <select id="validationMode">
+                            <option value="strict" selected>Strict URL (http/https only)</option>
+                            <option value="permissive">Permissive (URLs, mailto, tel, WIFI)</option>
+                            <option value="raw">Raw Text (Allow any string)</option>
+                        </select>
                     </div>
                     <div class="field">
                         <label for="qrLevel">Error correction</label>
@@ -82,6 +102,21 @@
                         <div class="color-picker-wrapper">
                             <input type="color" id="fgColor" value="#000000" aria-label="Choose foreground color">
                             <input type="text" id="fgColorText" value="#000000" aria-label="Foreground hex color">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label for="bgColorText">Background color</label>
+                        <div class="color-picker-wrapper">
+                            <input type="color" id="bgColor" value="#FFFFFF" aria-label="Choose background color">
+                            <input type="text" id="bgColorText" value="#FFFFFF" aria-label="Background hex color">
+                        </div>
+                    </div>
+                    <div class="field logo-field">
+                        <label for="logo-upload">Center logo <span class="helper-text">PNG, SVG, or WEBP · locks correction to H</span></label>
+                        <input id="logo-upload" type="file" accept="image/png,image/svg+xml,image/webp,.png,.svg,.webp">
+                        <div id="logoPreview" class="logo-preview" hidden>
+                            <img id="logoThumbnail" alt="Center logo preview">
+                            <button id="removeLogoBtn" class="btn btn-secondary" type="button">Remove Logo</button>
                         </div>
                     </div>
                 </div>
@@ -124,6 +159,22 @@
         </footer>
     </div>
 
+    <div id="rawPasteModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="raw-paste-title" hidden>
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title-group"><h2 id="raw-paste-title">Paste batch data</h2></div>
+                <button id="closeRawPasteBtn" class="modal-close" type="button" aria-label="Close dialog">&times;</button>
+            </div>
+            <div class="modal-body raw-paste-body">
+                <p>Paste rows from a spreadsheet. Tab, comma, or pipe separates label and payload; one value per line is also supported.</p>
+                <textarea id="rawPasteInput" rows="10" placeholder="POS-10&#9;https://example.com"></textarea>
+                <div class="raw-paste-actions">
+                    <button id="cancelRawPasteBtn" class="btn btn-secondary" type="button">Cancel</button>
+                    <button id="parseRawPasteBtn" class="btn btn-primary" type="button">Add to Grid</button>
+                </div>
+            </div>
+        </div>
+    </div>
     <div id="pro-modal" class="pro-modal modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="pro-modal-title" hidden>
         <div class="modal-card pro-modal-panel">
             <div class="modal-header">

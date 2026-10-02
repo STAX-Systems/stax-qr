@@ -21,10 +21,12 @@ The audit recorded no third-party imports and no `package.json` dependency list 
 Files:
 
 - `build_fastlane.py` — fastlane compilation entry (`python __main__`)
+- `index.html`, `app.js`, `style.css` — interactive row grid, validation, QR generation, branding, and export interface
+- `jszip.min.js` / `jszip.LICENSE.markdown` — locally bundled ZIP generation library and license
 - `assets/` — generator assets
 - `README.md` — this document
 
-Catalog execution stack: zero-dependency browser utility using Web Crypto and HTML5 Canvas. The Sweatshop storefront consumes this utility as a decoupled browser tool (`consumes_utility`, client-side). Generation for the fastlane package is the Python build script, still with no harvested third-party imports.
+Catalog execution stack: browser utility using Web Crypto and HTML5 Canvas. Browser libraries are vendored and do not require network access at runtime. JSZip 3.10.1 is bundled for client-side PNG/SVG ZIP exports; its MIT license is included in `jszip.LICENSE.markdown`. The Sweatshop storefront consumes this utility as a decoupled browser tool (`consumes_utility`, client-side). Generation for the fastlane package is the Python build script, still with no harvested third-party imports.
 
 License posture in the fleet catalog: proprietary. The web tool is free to run. Paid SVG export is the commercial edge.
 

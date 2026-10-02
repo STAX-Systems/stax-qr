@@ -1,8 +1,6 @@
 const generateBtn = document.getElementById('generateBtn');
 const downloadBtn = document.getElementById('download-zip');
-const labelsInput = document.getElementById('labelsInput');
-const payloadsInput = document.getElementById('payloadsInput');
-const labelPrefixInput = document.getElementById('labelPrefix');
+const batchGrid = document.getElementById('batch-grid');
 const syncStatus = document.getElementById('syncStatus');
 const previewGrid = document.getElementById('previewGrid');
 const countDisplay = document.getElementById('countDisplay');
@@ -19,11 +17,22 @@ const proBadge = document.querySelector('.pro-badge');
 
 const qrSizeInput = document.getElementById('qrSize');
 const qrLevelInput = document.getElementById('qrLevel');
-
+const validationModeInput = document.getElementById('validationMode');
 const fgColorInput = document.getElementById('fgColor');
 const fgColorTextInput = document.getElementById('fgColorText');
+const bgColorInput = document.getElementById('bgColor');
+const bgColorTextInput = document.getElementById('bgColorText');
+const logoUploadInput = document.getElementById('logo-upload');
+const logoPreview = document.getElementById('logoPreview');
+const logoThumbnail = document.getElementById('logoThumbnail');
+const qrLevelHelper = document.querySelector('label[for="qrLevel"]');
+const rawPasteModal = document.getElementById('rawPasteModal');
+const rawPasteInput = document.getElementById('rawPasteInput');
 
-let generatedQRs = []; // Stores objects: { label, value, canvas, filename }
+let generatedQRs = [];
+let logoImage = null;
+let logoDataUrl = '';
+let previousQrLevel = qrLevelInput.value;
 const LICENSE_STORAGE_KEY = 'stax_qr_pro_unlocked';
 const LICENSE_SALT = 'STAX_OFFLINE_SECRET_SALT_V1';
 
@@ -192,7 +201,7 @@ function extractQRMatrix(canvas) {
     );
 }
 
-function buildSvgFromMatrix(matrix, fgColor, bgColor) {
+function buildSvgFromMatrix(matrix, fgColor, bgColor, logo) {
     if (!Array.isArray(matrix) || matrix.length === 0
         || matrix.some(row => !Array.isArray(row) || row.length !== matrix.length)) {
         throw new Error('A square QR module matrix is required to build an SVG.');
@@ -202,9 +211,16 @@ function buildSvgFromMatrix(matrix, fgColor, bgColor) {
     const background = safeColor(bgColor, '#FFFFFF');
     let path = '';
     matrix.forEach((row, y) => row.forEach((dark, x) => {
-        if (dark) path += `M${x} ${y}h1v1h-1z`;
+        if (dark) path += `M${x + 4} ${y + 4}h1v1h-1z`;
     }));
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${matrix.length} ${matrix.length}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="${background}"/><path d="${path}" fill="${foreground}"/></svg>`;
+    const logoMarkup = logo ? (() => {
+        const side = matrix.length * 0.2;
+        const inset = Math.max(0.5, logo.insetModules || 0.5);
+        const origin = (matrix.length + 8 - side) / 2;
+        const borderColor = colorLuminance(background) > 0.5 ? '#000000' : '#FFFFFF';
+        return `<rect x="${origin}" y="${origin}" width="${side}" height="${side}" fill="${background}"/><rect x="${origin + inset / 2}" y="${origin + inset / 2}" width="${side - inset}" height="${side - inset}" fill="none" stroke="${borderColor}" stroke-width="${Math.max(0.35, inset / 4)}"/><image x="${origin + inset}" y="${origin + inset}" width="${side - inset * 2}" height="${side - inset * 2}" href="${logo.dataUrl}" preserveAspectRatio="xMidYMid meet"/>`;
+    })() : '';
+    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${matrix.length + 8} ${matrix.length + 8}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="${background}"/><path d="${path}" fill="${foreground}"/>${logoMarkup}</svg>`;
 }
 
 function buildAverySheetPdf(qrItems) {
@@ -262,17 +278,28 @@ function buildAverySheetPdf(qrItems) {
             const qrSize = 50.4;
             const qrX = labelX + 7.2;
             const qrY = labelBottom + (72 - qrSize) / 2;
-            const moduleSize = qrSize / matrix.length;
+            const totalModules = matrix.length + 8;
+            const moduleSize = qrSize / totalModules;
+            const maskModules = matrix.length * 0.2;
+            const maskStart = (matrix.length - maskModules) / 2;
 
             commands.push(`${bgR.toFixed(4)} ${bgG.toFixed(4)} ${bgB.toFixed(4)} rg ${labelX.toFixed(2)} ${labelBottom.toFixed(2)} 189 72 re f`);
             commands.push(`${fgR.toFixed(4)} ${fgG.toFixed(4)} ${fgB.toFixed(4)} rg`);
             matrix.forEach((matrixRow, matrixY) => matrixRow.forEach((dark, matrixX) => {
-                if (dark) {
-                    const x = qrX + matrixX * moduleSize;
-                    const y = qrY + (matrix.length - matrixY - 1) * moduleSize;
+                const underLogo = item.logo && matrixX >= maskStart && matrixX < maskStart + maskModules
+                    && matrixY >= maskStart && matrixY < maskStart + maskModules;
+                if (dark && !underLogo) {
+                    const x = qrX + (matrixX + 4) * moduleSize;
+                    const y = qrY + (matrix.length + 3 - matrixY) * moduleSize;
                     commands.push(`${x.toFixed(3)} ${y.toFixed(3)} ${moduleSize.toFixed(3)} ${moduleSize.toFixed(3)} re f`);
                 }
             }));
+            if (item.logo) {
+                const maskSize = matrix.length * moduleSize * 0.2;
+                const maskX = qrX + (qrSize - maskSize) / 2;
+                const maskY = qrY + (qrSize - maskSize) / 2;
+                commands.push(`q ${maskSize.toFixed(3)} 0 0 ${maskSize.toFixed(3)} ${maskX.toFixed(3)} ${maskY.toFixed(3)} cm BI /W 48 /H 48 /CS /RGB /BPC 8 /F /ASCIIHexDecode ID\n${item.logo.pdfRgbHex}\n> EI Q`);
+            }
 
             const textX = labelX + 64.8;
             const textY = labelBottom + 59;
@@ -330,10 +357,63 @@ function downloadBlob(blob, filename) {
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// Sync color inputs
+function colorLuminance(hexColor) {
+    const match = /^#([0-9A-F]{6})$/i.exec(hexColor || '');
+    if (!match) return 1;
+    const channels = [0, 2, 4].map(index => parseInt(match[1].slice(index, index + 2), 16) / 255);
+    const linear = channels.map(channel => channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4);
+    return linear[0] * 0.2126 + linear[1] * 0.7152 + linear[2] * 0.0722;
+}
+
+function drawContainedImage(context, image, x, y, width, height) {
+    const imageWidth = image.naturalWidth || image.width;
+    const imageHeight = image.naturalHeight || image.height;
+    const scale = Math.min(width / imageWidth, height / imageHeight);
+    const drawWidth = imageWidth * scale;
+    const drawHeight = imageHeight * scale;
+    context.drawImage(image, x + (width - drawWidth) / 2, y + (height - drawHeight) / 2, drawWidth, drawHeight);
+}
+
+function drawCenterLogo(context, size, image, background, matrixRatio = 1) {
+    if (!image) return;
+    const matrixSize = size * matrixRatio;
+    const matrixOrigin = (size - matrixSize) / 2;
+    const side = matrixSize * 0.2;
+    const origin = matrixOrigin + (matrixSize - side) / 2;
+    const borderColor = colorLuminance(background) > 0.5 ? '#000000' : '#FFFFFF';
+    context.fillStyle = background;
+    context.fillRect(origin, origin, side, side);
+    context.strokeStyle = borderColor;
+    context.lineWidth = Math.max(1, size / 300);
+    context.strokeRect(origin + context.lineWidth / 2, origin + context.lineWidth / 2, side - context.lineWidth, side - context.lineWidth);
+    const inset = Math.max(4, size * 0.0133);
+    drawContainedImage(context, image, origin + inset, origin + inset, side - inset * 2, side - inset * 2);
+}
+
+function buildLogoPdfRgbHex(image, background) {
+    const artwork = document.createElement('canvas');
+    artwork.width = 48;
+    artwork.height = 48;
+    const context = artwork.getContext('2d', { willReadFrequently: true });
+    context.fillStyle = background;
+    context.fillRect(0, 0, 48, 48);
+    context.strokeStyle = colorLuminance(background) > 0.5 ? '#000000' : '#FFFFFF';
+    context.lineWidth = 2;
+    context.strokeRect(2, 2, 44, 44);
+    drawContainedImage(context, image, 8, 8, 32, 32);
+    const pixels = context.getImageData(0, 0, 48, 48).data;
+    let hex = '';
+    for (let index = 0; index < pixels.length; index += 4) {
+        hex += [pixels[index], pixels[index + 1], pixels[index + 2]]
+            .map(channel => channel.toString(16).padStart(2, '0')).join('');
+    }
+    return hex.toUpperCase();
+}
+
 function syncColors(picker, text) {
     picker.addEventListener('input', (e) => {
         text.value = e.target.value.toUpperCase();
+        invalidateGeneratedOutput();
     });
     text.addEventListener('change', (e) => {
         let val = e.target.value;
@@ -345,10 +425,80 @@ function syncColors(picker, text) {
         } else {
             text.value = picker.value.toUpperCase();
         }
+        invalidateGeneratedOutput();
     });
 }
 
 syncColors(fgColorInput, fgColorTextInput);
+syncColors(bgColorInput, bgColorTextInput);
+qrSizeInput.addEventListener('change', invalidateGeneratedOutput);
+qrLevelInput.addEventListener('change', invalidateGeneratedOutput);
+
+qrLevelInput.addEventListener('change', () => {
+    if (!logoImage) previousQrLevel = qrLevelInput.value;
+});
+
+logoUploadInput.addEventListener('change', () => {
+    const file = logoUploadInput.files && logoUploadInput.files[0];
+    if (!file) return;
+    const extensionAllowed = /\.(png|svg|webp)$/i.test(file.name);
+    if (!extensionAllowed || file.size > 10 * 1024 * 1024) {
+        setGenerationStatus('Choose a PNG, SVG, or WEBP logo smaller than 10 MB.', true);
+        logoUploadInput.value = '';
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onerror = () => {
+        setGenerationStatus('The selected logo could not be read.', true);
+        logoUploadInput.value = '';
+    };
+    reader.onload = () => {
+        const image = new Image();
+        image.onerror = () => {
+            setGenerationStatus('The selected file is not a supported image.', true);
+            logoUploadInput.value = '';
+        };
+        image.onload = () => {
+            const normalized = document.createElement('canvas');
+            const scale = Math.min(1, 1024 / Math.max(image.naturalWidth, image.naturalHeight));
+            normalized.width = Math.max(1, Math.round(image.naturalWidth * scale));
+            normalized.height = Math.max(1, Math.round(image.naturalHeight * scale));
+            try {
+                normalized.getContext('2d').drawImage(image, 0, 0, normalized.width, normalized.height);
+                logoImage = image;
+                logoDataUrl = normalized.toDataURL('image/png');
+                logoThumbnail.src = logoDataUrl;
+                logoPreview.hidden = false;
+                invalidateGeneratedOutput();
+                previousQrLevel = qrLevelInput.value;
+                qrLevelInput.value = 'H';
+                qrLevelInput.disabled = true;
+                qrLevelHelper.textContent = 'Error correction (locked to H for logo)';
+                setGenerationStatus('Center logo loaded. Error correction is locked to H.');
+            } catch (err) {
+                console.error('The selected logo could not be prepared for export.', err);
+                setGenerationStatus('The selected logo cannot be embedded. Choose a local PNG, SVG, or WEBP image.', true);
+                logoUploadInput.value = '';
+            }
+        };
+        image.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+});
+
+document.getElementById('removeLogoBtn').addEventListener('click', () => {
+    invalidateGeneratedOutput();
+    logoImage = null;
+    logoDataUrl = '';
+    logoUploadInput.value = '';
+    logoThumbnail.removeAttribute('src');
+    logoPreview.hidden = true;
+    qrLevelInput.disabled = false;
+    qrLevelInput.value = previousQrLevel;
+    qrLevelHelper.textContent = 'Error correction';
+    setGenerationStatus('Center logo removed.');
+});
 
 function sanitizeFilename(name) {
     // Remove illegal filename characters
@@ -368,63 +518,318 @@ function setExportButtonsDisabled(disabled) {
     });
 }
 
-function getNonEmptyLineCount(text) {
-    return text.split(/\r?\n/).filter(line => line.trim().length > 0).length;
+function getBatchRows() {
+    return Array.from(batchGrid.querySelectorAll('tr'));
 }
 
-function updateSyncStatus() {
-    const urlCount = getNonEmptyLineCount(payloadsInput.value);
-    const labelCount = getNonEmptyLineCount(labelsInput.value);
-    let alignment = 'Ready';
-
-    if (urlCount > 0 && labelCount === urlCount) alignment = 'Matched';
-    else if (urlCount > labelCount) {
-        alignment = labelCount === 0 ? 'Labels optional' : `${urlCount - labelCount} fallback label${urlCount - labelCount === 1 ? '' : 's'}`;
-    } else if (labelCount > urlCount) alignment = 'Extra labels ignored';
-
-    syncStatus.textContent = `${urlCount} URL${urlCount === 1 ? '' : 's'} | ${labelCount} Label${labelCount === 1 ? '' : 's'} (${alignment})`;
+function getRowInputs(row) {
+    return {
+        label: row.querySelector('.row-label'),
+        payload: row.querySelector('.row-payload')
+    };
 }
 
-function splitSmartPaste(event) {
-    const pastedText = event.clipboardData.getData('text');
-    const separator = pastedText.includes('\t') ? '\t' : pastedText.includes('|') ? '|' : null;
-    if (!separator) return;
+function validatePayload(value, mode) {
+    const payload = value.trim();
+    if (!payload) return { valid: false, empty: true, message: 'Empty' };
+    if (mode === 'raw') return { valid: true, message: 'Valid' };
 
-    const rows = pastedText.split(/\r?\n/).filter(row => row.trim().length > 0);
-    if (rows.length === 0 || rows.some(row => !row.includes(separator))) return;
+    if (mode === 'permissive') {
+        if (/^mailto:[^\s@]+@[^\s@]+(?:\?[^\s]*)?$/i.test(payload)) return { valid: true, message: 'Valid' };
+        if (/^tel:\+?[0-9(). -]{3,}$/i.test(payload)) return { valid: true, message: 'Valid' };
+        if (/^WIFI:/i.test(payload)) {
+            const fields = payload.slice(5).split(';').filter(Boolean);
+            const ssid = fields.find(field => /^S:/i.test(field));
+            const security = fields.find(field => /^T:/i.test(field));
+            const password = fields.find(field => /^P:/i.test(field));
+            if (ssid && /^S:.+/i.test(ssid) && security
+                && /^T:(?:nopass|WEP|WPA|WPA2|WPA3)$/i.test(security)
+                && (/^T:nopass$/i.test(security) || (password && /^P:.+/i.test(password)))) {
+                return { valid: true, message: 'Valid' };
+            }
+            return { valid: false, message: 'Invalid WIFI payload' };
+        }
+    }
 
-    event.preventDefault();
-    const labels = [];
-    const payloads = [];
-    rows.forEach(row => {
-        const separatorIndex = row.indexOf(separator);
-        labels.push(row.slice(0, separatorIndex).trim());
-        payloads.push(row.slice(separatorIndex + 1).trim());
+    try {
+        const url = new URL(payload);
+        if (url.protocol === 'http:' || url.protocol === 'https:') {
+            return { valid: true, message: 'Valid' };
+        }
+        if (mode === 'permissive' && ['mailto:', 'tel:'].includes(url.protocol)) {
+            return { valid: true, message: 'Valid' };
+        }
+        return { valid: false, message: mode === 'strict' ? 'HTTP(S) only' : 'Unsupported URL scheme' };
+    } catch {
+        return {
+            valid: false,
+            message: /^[a-z][a-z\d+.-]*:/i.test(payload) ? 'Invalid URL' : 'Missing protocol'
+        };
+    }
+}
+
+function updateRowValidation(row) {
+    const payloadInput = row.querySelector('.row-payload');
+    const status = row.querySelector('.row-status');
+    const result = validatePayload(payloadInput.value, validationModeInput.value);
+    row.classList.toggle('is-invalid', !result.empty && !result.valid);
+    status.classList.toggle('is-valid', result.valid);
+    status.classList.toggle('is-invalid', !result.empty && !result.valid);
+    status.textContent = result.valid ? '✓ Valid' : result.message;
+    status.title = result.message;
+    return result;
+}
+
+function updateBatchState() {
+    const rows = getBatchRows();
+    let readyCount = 0;
+    let invalidCount = 0;
+    rows.forEach((row, index) => {
+        row.querySelector('.row-index').textContent = String(index + 1);
+        const result = updateRowValidation(row);
+        if (row.querySelector('.row-payload').value.trim()) {
+            if (result.valid) readyCount++;
+            else invalidCount++;
+        }
     });
-    labelsInput.value = labels.join('\n');
-    payloadsInput.value = payloads.join('\n');
-    updateSyncStatus();
-    payloadsInput.focus();
+    syncStatus.textContent = `${rows.length} row${rows.length === 1 ? '' : 's'} · ${readyCount} ready${invalidCount ? ` · ${invalidCount} invalid` : ''}`;
+    generateBtn.disabled = validationModeInput.value === 'strict' && invalidCount > 0;
+    if (validationModeInput.value === 'strict' && invalidCount > 0) {
+        setGenerationStatus(`Fix ${invalidCount} invalid payload${invalidCount === 1 ? '' : 's'} before generating.`, true);
+    } else if (generationStatus.classList.contains('is-error') && /invalid payload/i.test(generationStatus.textContent)) {
+        setGenerationStatus('');
+    }
 }
 
-[labelsInput, payloadsInput].forEach(input => {
-    input.addEventListener('input', updateSyncStatus);
-    input.addEventListener('paste', splitSmartPaste);
+function invalidateGeneratedOutput() {
+    if (generatedQRs.length === 0) return;
+    generatedQRs = [];
+    countDisplay.textContent = '0';
+    setExportButtonsDisabled(true);
+    previewGrid.innerHTML = '<div class="empty-state"><p>Batch updated</p><span>Generate again to refresh the QR codes.</span></div>';
+}
+
+function addBatchRow(label = '', payload = '', focusField = '') {
+    const row = document.createElement('tr');
+    const indexCell = document.createElement('td');
+    indexCell.className = 'row-index';
+    const labelCell = document.createElement('td');
+    const labelInput = document.createElement('input');
+    labelInput.className = 'row-label';
+    labelInput.type = 'text';
+    labelInput.autocomplete = 'off';
+    labelInput.setAttribute('aria-label', 'Row label');
+    labelInput.placeholder = 'Optional label';
+    labelInput.value = label;
+    labelCell.appendChild(labelInput);
+    const payloadCell = document.createElement('td');
+    const payloadInput = document.createElement('input');
+    payloadInput.className = 'row-payload';
+    payloadInput.type = 'text';
+    payloadInput.autocomplete = 'off';
+    payloadInput.spellcheck = false;
+    payloadInput.setAttribute('aria-label', 'URL or payload');
+    payloadInput.placeholder = 'https://example.com';
+    payloadInput.value = payload;
+    payloadCell.appendChild(payloadInput);
+    const statusCell = document.createElement('td');
+    const status = document.createElement('span');
+    status.className = 'row-status';
+    statusCell.appendChild(status);
+    const removeCell = document.createElement('td');
+    const removeButton = document.createElement('button');
+    removeButton.className = 'row-del';
+    removeButton.type = 'button';
+    removeButton.textContent = '×';
+    removeButton.setAttribute('aria-label', 'Remove row');
+    removeCell.appendChild(removeButton);
+    row.append(indexCell, labelCell, payloadCell, statusCell, removeCell);
+    batchGrid.appendChild(row);
+
+    [labelInput, payloadInput].forEach(input => {
+        input.addEventListener('input', () => {
+            invalidateGeneratedOutput();
+            updateBatchState();
+        });
+        input.addEventListener('keydown', event => {
+            const fieldClass = input.classList.contains('row-label') ? '.row-label' : '.row-payload';
+            if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                const rows = getBatchRows();
+                const rowIndex = rows.indexOf(row) + (event.key === 'ArrowDown' ? 1 : -1);
+                const next = rows[rowIndex];
+                if (next) {
+                    event.preventDefault();
+                    next.querySelector(fieldClass).focus();
+                }
+            } else if (input === payloadInput && (event.key === 'Enter' || (event.key === 'Tab' && !event.shiftKey))) {
+                event.preventDefault();
+                const next = addBatchRow('', '', 'label');
+                next.querySelector('.row-label').focus();
+            }
+        });
+        input.addEventListener('paste', event => {
+            const text = event.clipboardData.getData('text');
+            if (!/[\r\n\t|,]/.test(text)) return;
+            event.preventDefault();
+            const startIndex = getBatchRows().indexOf(row);
+            writePastedRows(parsePastedRows(text, input === payloadInput ? 'payload' : 'label'), startIndex);
+        });
+    });
+    removeButton.addEventListener('click', () => {
+        invalidateGeneratedOutput();
+        row.remove();
+        if (getBatchRows().length === 0) addBatchRow();
+        updateBatchState();
+    });
+    updateBatchState();
+    if (focusField === 'label') labelInput.focus();
+    else if (focusField === 'payload') payloadInput.focus();
+    return row;
+}
+
+function detectPasteDelimiter(text, activeField) {
+    if (text.includes('\t')) return '\t';
+    if (text.includes('|')) return '|';
+    if (text.includes(',')) {
+        const rows = text.split(/\r?\n/).filter(row => row.trim());
+        const looksLikeOneColumnUrls = activeField === 'payload' && rows.every(row => {
+            const comma = row.indexOf(',');
+            const protocol = row.indexOf('://');
+            return comma >= 0 && protocol >= 0 && protocol < comma;
+        });
+        if (!looksLikeOneColumnUrls) return ',';
+    }
+    return '';
+}
+
+function parsePastedRows(text, activeField) {
+    const delimiter = detectPasteDelimiter(text, activeField);
+    const records = [];
+    let cells = [];
+    let value = '';
+    let quoted = false;
+    const pushCell = () => {
+        cells.push(value.trim());
+        value = '';
+    };
+    const pushRow = () => {
+        pushCell();
+        if (cells.some(cell => cell.length)) {
+            if (cells.length > 1) records.push({ label: cells[0], payload: cells.slice(1).join(delimiter || '') });
+            else records.push({ label: activeField === 'label' ? cells[0] : '', payload: activeField === 'payload' ? cells[0] : '' });
+        }
+        cells = [];
+    };
+    for (let index = 0; index < text.length; index++) {
+        const character = text[index];
+        if (character === '"') {
+            if (quoted && text[index + 1] === '"') {
+                value += '"';
+                index++;
+            } else {
+                quoted = !quoted;
+            }
+        } else if (!quoted && delimiter && character === delimiter) {
+            pushCell();
+        } else if (!quoted && (character === '\n' || character === '\r')) {
+            if (character === '\r' && text[index + 1] === '\n') index++;
+            pushRow();
+        } else {
+            value += character;
+        }
+    }
+    if (value.length || cells.length) pushRow();
+    return records;
+}
+
+function writePastedRows(records, startIndex) {
+    if (!records.length) return;
+    invalidateGeneratedOutput();
+    let rows = getBatchRows();
+    while (rows.length < startIndex + records.length) {
+        addBatchRow();
+        rows = getBatchRows();
+    }
+    records.forEach((record, index) => {
+        const inputs = getRowInputs(rows[startIndex + index]);
+        inputs.label.value = record.label;
+        inputs.payload.value = record.payload;
+    });
+    updateBatchState();
+}
+
+function applyAutoLabels() {
+    const prefix = document.getElementById('autoLabelPrefix').value;
+    const start = Math.max(0, Number.parseInt(document.getElementById('autoLabelStart').value, 10) || 0);
+    const padding = Math.min(12, Math.max(0, Number.parseInt(document.getElementById('autoLabelPadding').value, 10) || 0));
+    invalidateGeneratedOutput();
+    getBatchRows().forEach((row, index) => {
+        row.querySelector('.row-label').value = `${prefix}${String(start + index).padStart(padding, '0')}`;
+    });
+    updateBatchState();
+}
+
+document.getElementById('applyLabelsBtn').addEventListener('click', applyAutoLabels);
+document.getElementById('clearEmptyRowsBtn').addEventListener('click', () => {
+    invalidateGeneratedOutput();
+    getBatchRows().forEach(row => {
+        const inputs = getRowInputs(row);
+        if (!inputs.label.value.trim() && !inputs.payload.value.trim()) row.remove();
+    });
+    if (getBatchRows().length === 0) addBatchRow();
+    updateBatchState();
+});
+document.getElementById('addRowBtn').addEventListener('click', () => addBatchRow('', '', 'label'));
+validationModeInput.addEventListener('change', updateBatchState);
+
+function openRawPaste() {
+    rawPasteModal.hidden = false;
+    rawPasteModal.classList.add('active');
+    rawPasteInput.focus();
+}
+
+function closeRawPaste() {
+    rawPasteModal.hidden = true;
+    rawPasteModal.classList.remove('active');
+}
+
+document.getElementById('rawPasteBtn').addEventListener('click', openRawPaste);
+document.getElementById('closeRawPasteBtn').addEventListener('click', closeRawPaste);
+document.getElementById('cancelRawPasteBtn').addEventListener('click', closeRawPaste);
+document.getElementById('parseRawPasteBtn').addEventListener('click', () => {
+    const records = parsePastedRows(rawPasteInput.value, 'payload');
+    if (records.length === 0) {
+        setGenerationStatus('Paste one or more values before adding them to the grid.', true);
+        return;
+    }
+    writePastedRows(records, getBatchRows().length);
+    rawPasteInput.value = '';
+    closeRawPaste();
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && !rawPasteModal.hidden) closeRawPaste();
 });
 
-updateSyncStatus();
+addBatchRow();
 
 generateBtn.addEventListener('click', () => {
-    const payloadLines = payloadsInput.value.split(/\r?\n/);
-    const labelLines = labelsInput.value.split(/\r?\n/);
-    const records = payloadLines
-        .map((line, index) => ({ value: line.trim(), label: (labelLines[index] || '').trim() }))
-        .filter(record => record.value.length > 0);
+    updateBatchState();
+    const rows = getBatchRows();
+    const records = rows.map(row => {
+        const inputs = getRowInputs(row);
+        return { value: inputs.payload.value.trim(), label: inputs.label.value.trim() };
+    }).filter(record => record.value.length > 0);
+    const invalidRecords = records.filter(record => !validatePayload(record.value, validationModeInput.value).valid);
     
     previewGrid.innerHTML = '';
     generatedQRs = [];
     setExportButtonsDisabled(true);
     setGenerationStatus('');
+
+    if (validationModeInput.value === 'strict' && invalidRecords.length > 0) {
+        setGenerationStatus(`Fix ${invalidRecords.length} invalid payload${invalidRecords.length === 1 ? '' : 's'} before generating.`, true);
+        return;
+    }
     
     if (records.length === 0) {
         previewGrid.innerHTML = `
@@ -447,17 +852,17 @@ generateBtn.addEventListener('click', () => {
     countDisplay.textContent = '0';
     
     const size = Math.min(1000, Math.max(100, Number.parseInt(qrSizeInput.value, 10) || 300));
-    const level = (qrLevelInput.value || 'M').trim().charAt(0).toUpperCase();
+    const level = logoImage ? 'H' : (qrLevelInput.value || 'M').trim().charAt(0).toUpperCase();
     const sanitizedLevel = ['L', 'M', 'Q', 'H'].includes(level) ? level : 'M';
     const fgColor = fgColorInput.value || '#000000';
-    const labelPrefix = labelPrefixInput.value || 'qr-';
+    const bgColor = bgColorInput.value || '#FFFFFF';
     
     const filenameCounts = {};
 
     try {
         activeRecords.forEach((record, index) => {
             const urlPayload = record.value;
-            const label = record.label || `${labelPrefix}${index + 1}`;
+            const label = record.label || `qr-${index + 1}`;
 
             const baseFilename = sanitizeFilename(label) || 'qrcode';
             let filename = baseFilename;
@@ -486,31 +891,41 @@ generateBtn.addEventListener('click', () => {
             qr.addData(urlPayload);
             qr.make();
             const moduleCount = qr.getModuleCount();
-            context.fillStyle = '#ffffff';
+            const totalModules = moduleCount + 8;
+            const modulePixels = size / totalModules;
+            context.fillStyle = bgColor;
             context.fillRect(0, 0, size, size);
-            context.fillStyle = fgColorInput.value || '#000000';
+            context.fillStyle = fgColor;
+            const matrix = [];
             for (let row = 0; row < moduleCount; row++) {
-                const top = Math.floor(row * size / moduleCount);
-                const bottom = Math.ceil((row + 1) * size / moduleCount);
+                const top = Math.floor((row + 4) * modulePixels);
+                const bottom = Math.ceil((row + 5) * modulePixels);
+                const matrixRow = [];
                 for (let column = 0; column < moduleCount; column++) {
-                    if (!qr.isDark(row, column)) continue;
-                    const left = Math.floor(column * size / moduleCount);
-                    const right = Math.ceil((column + 1) * size / moduleCount);
+                    const dark = qr.isDark(row, column);
+                    matrixRow.push(dark);
+                    if (!dark) continue;
+                    const left = Math.floor((column + 4) * modulePixels);
+                    const right = Math.ceil((column + 5) * modulePixels);
                     context.fillRect(left, top, right - left, bottom - top);
                 }
+                matrix.push(matrixRow);
             }
+            if (logoImage) drawCenterLogo(context, size, logoImage, bgColor, moduleCount / totalModules);
 
             const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
-            let hasWhite = false;
-            let hasNonWhite = false;
+            const backgroundRgb = [1, 3, 5].map(index => parseInt(bgColor.slice(index, index + 2), 16));
+            let hasBackground = false;
+            let hasForeground = false;
             for (let pixel = 0; pixel < pixels.length; pixel += 4) {
-                const isWhite = pixels[pixel] === 255 && pixels[pixel + 1] === 255 && pixels[pixel + 2] === 255;
-                if (isWhite) hasWhite = true;
-                else hasNonWhite = true;
-                if (hasWhite && hasNonWhite) break;
+                const matchesBackground = pixels[pixel] === backgroundRgb[0]
+                    && pixels[pixel + 1] === backgroundRgb[1] && pixels[pixel + 2] === backgroundRgb[2];
+                if (matchesBackground) hasBackground = true;
+                else hasForeground = true;
+                if (hasBackground && hasForeground) break;
             }
-            if (!hasWhite || !hasNonWhite) {
-                throw new Error('The QR canvas did not render visible modules on a white background. Choose a contrasting foreground color.');
+            if (!hasBackground || !hasForeground) {
+                throw new Error('The QR canvas did not render visible modules. Choose contrasting foreground and background colors.');
             }
             imageContainer.appendChild(canvas);
             card.appendChild(imageContainer);
@@ -524,13 +939,20 @@ generateBtn.addEventListener('click', () => {
             info.appendChild(valEl);
             card.appendChild(info);
 
+            const logo = logoImage ? {
+                dataUrl: logoDataUrl,
+                insetModules: 4 * totalModules / size,
+                pdfRgbHex: buildLogoPdfRgbHex(logoImage, bgColor)
+            } : null;
             const item = {
                 label: label,
                 value: urlPayload,
                 canvas: canvas,
                 filename: filename,
                 fgColor: fgColor,
-                bgColor: '#ffffff'
+                bgColor: bgColor,
+                matrix: matrix,
+                logo: logo
             };
             const downloadButton = document.createElement('button');
             downloadButton.className = 'qr-download';
@@ -622,8 +1044,7 @@ svgExportBtn.addEventListener('click', async () => {
     try {
         const zip = new JSZip();
         generatedQRs.forEach(item => {
-            item.matrix = extractQRMatrix(item.canvas);
-            zip.file(`${item.filename}.svg`, buildSvgFromMatrix(item.matrix, item.fgColor, item.bgColor));
+            zip.file(`${item.filename}.svg`, buildSvgFromMatrix(item.matrix, item.fgColor, item.bgColor, item.logo));
         });
         const content = await zip.generateAsync({ type: 'blob' });
         downloadBlob(content, 'qrcodes-svg.zip');
