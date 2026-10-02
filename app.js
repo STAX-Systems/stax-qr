@@ -1,6 +1,9 @@
 const generateBtn = document.getElementById('generateBtn');
 const downloadBtn = document.getElementById('download-zip');
-const batchInput = document.getElementById('batchInput');
+const labelsInput = document.getElementById('labelsInput');
+const payloadsInput = document.getElementById('payloadsInput');
+const labelPrefixInput = document.getElementById('labelPrefix');
+const syncStatus = document.getElementById('syncStatus');
 const previewGrid = document.getElementById('previewGrid');
 const countDisplay = document.getElementById('countDisplay');
 const generationStatus = document.getElementById('generationStatus');
@@ -365,57 +368,96 @@ function setExportButtonsDisabled(disabled) {
     });
 }
 
+function getNonEmptyLineCount(text) {
+    return text.split(/\r?\n/).filter(line => line.trim().length > 0).length;
+}
+
+function updateSyncStatus() {
+    const urlCount = getNonEmptyLineCount(payloadsInput.value);
+    const labelCount = getNonEmptyLineCount(labelsInput.value);
+    let alignment = 'Ready';
+
+    if (urlCount > 0 && labelCount === urlCount) alignment = 'Matched';
+    else if (urlCount > labelCount) {
+        alignment = labelCount === 0 ? 'Labels optional' : `${urlCount - labelCount} fallback label${urlCount - labelCount === 1 ? '' : 's'}`;
+    } else if (labelCount > urlCount) alignment = 'Extra labels ignored';
+
+    syncStatus.textContent = `${urlCount} URL${urlCount === 1 ? '' : 's'} | ${labelCount} Label${labelCount === 1 ? '' : 's'} (${alignment})`;
+}
+
+function splitSmartPaste(event) {
+    const pastedText = event.clipboardData.getData('text');
+    const separator = pastedText.includes('\t') ? '\t' : pastedText.includes('|') ? '|' : null;
+    if (!separator) return;
+
+    const rows = pastedText.split(/\r?\n/).filter(row => row.trim().length > 0);
+    if (rows.length === 0 || rows.some(row => !row.includes(separator))) return;
+
+    event.preventDefault();
+    const labels = [];
+    const payloads = [];
+    rows.forEach(row => {
+        const separatorIndex = row.indexOf(separator);
+        labels.push(row.slice(0, separatorIndex).trim());
+        payloads.push(row.slice(separatorIndex + 1).trim());
+    });
+    labelsInput.value = labels.join('\n');
+    payloadsInput.value = payloads.join('\n');
+    updateSyncStatus();
+    payloadsInput.focus();
+}
+
+[labelsInput, payloadsInput].forEach(input => {
+    input.addEventListener('input', updateSyncStatus);
+    input.addEventListener('paste', splitSmartPaste);
+});
+
+updateSyncStatus();
+
 generateBtn.addEventListener('click', () => {
-    const rawText = batchInput.value;
-    const lines = rawText.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+    const payloadLines = payloadsInput.value.split(/\r?\n/);
+    const labelLines = labelsInput.value.split(/\r?\n/);
+    const records = payloadLines
+        .map((line, index) => ({ value: line.trim(), label: (labelLines[index] || '').trim() }))
+        .filter(record => record.value.length > 0);
     
     previewGrid.innerHTML = '';
     generatedQRs = [];
     setExportButtonsDisabled(true);
     setGenerationStatus('');
     
-    if (lines.length === 0) {
+    if (records.length === 0) {
         previewGrid.innerHTML = `
             <div class="empty-state">
-                <p>No valid lines found. Paste values and try again.</p>
+                <p>No target URLs or data found.</p>
             </div>
         `;
         countDisplay.textContent = '0';
-        setGenerationStatus('Enter at least one value or label|value pair, then generate QR codes.', true);
+        setGenerationStatus('Enter at least one URL or data value, then generate QR codes.', true);
         return;
     }
     
     // Enforce 100 limit
-    let activeLines = lines;
-    if (lines.length > 100) {
+    let activeRecords = records;
+    if (records.length > 100) {
         alert("Maximum limit of 100 QR codes exceeded. Only the first 100 rows will be processed.");
-        activeLines = lines.slice(0, 100);
+        activeRecords = records.slice(0, 100);
     }
     
     countDisplay.textContent = '0';
     
     const size = Math.min(1000, Math.max(100, Number.parseInt(qrSizeInput.value, 10) || 300));
-    const level = qrLevelInput.value;
-    const fgColor = fgColorInput.value;
+    const level = (qrLevelInput.value || 'M').trim().charAt(0).toUpperCase();
+    const sanitizedLevel = ['L', 'M', 'Q', 'H'].includes(level) ? level : 'M';
+    const fgColor = fgColorInput.value || '#000000';
+    const labelPrefix = labelPrefixInput.value || 'qr-';
     
     const filenameCounts = {};
 
     try {
-        activeLines.forEach((line) => {
-            let label = '';
-            let value = '';
-
-            if (line.includes('|')) {
-                const parts = line.split('|');
-                label = parts[0].trim();
-                value = parts.slice(1).join('|').trim();
-            } else {
-                label = line;
-                value = line;
-            }
-
-            if (!value) return;
-            if (!label) label = value;
+        activeRecords.forEach((record, index) => {
+            const urlPayload = record.value;
+            const label = record.label || `${labelPrefix}${index + 1}`;
 
             const baseFilename = sanitizeFilename(label) || 'qrcode';
             let filename = baseFilename;
@@ -428,65 +470,82 @@ generateBtn.addEventListener('click', () => {
 
             const card = document.createElement('article');
             card.className = 'qr-card';
-            const info = document.createElement('div');
-            info.className = 'qr-info';
             const labelEl = document.createElement('span');
             labelEl.className = 'qr-label';
             labelEl.textContent = label;
             labelEl.title = label;
-            const valEl = document.createElement('span');
-            valEl.className = 'qr-val';
-            valEl.textContent = value;
-            valEl.title = value;
-            info.appendChild(labelEl);
-            info.appendChild(valEl);
-            card.appendChild(info);
+            card.appendChild(labelEl);
 
             const imageContainer = document.createElement('div');
             imageContainer.className = 'qr-image-container';
             const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const context = canvas.getContext('2d', { willReadFrequently: true });
+            const qr = qrcode(0, sanitizedLevel);
+            qr.addData(urlPayload);
+            qr.make();
+            const moduleCount = qr.getModuleCount();
+            context.fillStyle = '#ffffff';
+            context.fillRect(0, 0, size, size);
+            context.fillStyle = fgColorInput.value || '#000000';
+            for (let row = 0; row < moduleCount; row++) {
+                const top = Math.floor(row * size / moduleCount);
+                const bottom = Math.ceil((row + 1) * size / moduleCount);
+                for (let column = 0; column < moduleCount; column++) {
+                    if (!qr.isDark(row, column)) continue;
+                    const left = Math.floor(column * size / moduleCount);
+                    const right = Math.ceil((column + 1) * size / moduleCount);
+                    context.fillRect(left, top, right - left, bottom - top);
+                }
+            }
+
+            const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+            let hasWhite = false;
+            let hasNonWhite = false;
+            for (let pixel = 0; pixel < pixels.length; pixel += 4) {
+                const isWhite = pixels[pixel] === 255 && pixels[pixel + 1] === 255 && pixels[pixel + 2] === 255;
+                if (isWhite) hasWhite = true;
+                else hasNonWhite = true;
+                if (hasWhite && hasNonWhite) break;
+            }
+            if (!hasWhite || !hasNonWhite) {
+                throw new Error('The QR canvas did not render visible modules on a white background. Choose a contrasting foreground color.');
+            }
             imageContainer.appendChild(canvas);
             card.appendChild(imageContainer);
 
-            new QRious({
-                element: canvas,
-                value: value,
-                size: size,
-                level: level,
-                foreground: fgColor,
-                background: '#ffffff'
-            });
+            const info = document.createElement('div');
+            info.className = 'qr-info';
+            const valEl = document.createElement('span');
+            valEl.className = 'qr-val';
+            valEl.textContent = urlPayload;
+            valEl.title = urlPayload;
+            info.appendChild(valEl);
+            card.appendChild(info);
 
             const item = {
                 label: label,
-                value: value,
+                value: urlPayload,
                 canvas: canvas,
                 filename: filename,
                 fgColor: fgColor,
                 bgColor: '#ffffff'
             };
-            const downloadLink = document.createElement('a');
-            downloadLink.className = 'qr-download';
-            downloadLink.textContent = 'Save PNG';
-            downloadLink.href = canvas.toDataURL('image/png');
-            downloadLink.download = `${filename}.png`;
-            downloadLink.setAttribute('aria-label', `Save ${label} as PNG`);
-            card.appendChild(downloadLink);
-
-            canvas.tabIndex = 0;
-            canvas.setAttribute('role', 'button');
-            canvas.setAttribute('aria-label', `Download QR code for ${label}`);
-            canvas.addEventListener('keydown', event => {
-                if (event.key === 'Enter' || event.key === ' ') {
-                    event.preventDefault();
-                    downloadLink.click();
-                }
+            const downloadButton = document.createElement('button');
+            downloadButton.className = 'qr-download';
+            downloadButton.type = 'button';
+            downloadButton.textContent = 'Save PNG';
+            downloadButton.setAttribute('aria-label', `Save ${label} as PNG`);
+            downloadButton.addEventListener('click', () => {
+                const downloadLink = document.createElement('a');
+                downloadLink.href = canvas.toDataURL('image/png');
+                downloadLink.download = `${filename}.png`;
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                downloadLink.remove();
             });
-            card.addEventListener('click', event => {
-                if (event.target !== downloadLink && !downloadLink.contains(event.target)) {
-                    downloadLink.click();
-                }
-            });
+            card.appendChild(downloadButton);
 
             generatedQRs.push(item);
             previewGrid.appendChild(card);
@@ -513,7 +572,7 @@ generateBtn.addEventListener('click', () => {
         previewGrid.innerHTML = `
             <div class="empty-state">
                 <p>No valid QR values found.</p>
-                <span>Each label|value row must include a value after the pipe.</span>
+                <span>Add at least one non-empty URL or data line.</span>
             </div>
         `;
         setGenerationStatus('No QR codes were generated. Add a value to each input row and try again.', true);

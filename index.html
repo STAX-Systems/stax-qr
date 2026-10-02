@@ -8,7 +8,8 @@
     <link rel="stylesheet" href="style.css">
     <!-- Local libraries to be inlined by fastlane builder -->
     <script src="jszip.min.js"></script>
-    <script src="qrious.min.js"></script>
+    <script src="qrcode-generator.js"></script>
+    <script src="qrcode-generator-utf8.js"></script>
 </head>
 <body>
     <div class="glass-bg" aria-hidden="true"></div>
@@ -38,9 +39,24 @@
                     <h2 id="workbench-title">Workbench Controls</h2>
                 </div>
 
-                <div class="field batch-field">
-                    <label for="batchInput">Batch input <span class="helper-text">One value per line · label|value or value</span></label>
-                    <textarea id="batchInput" placeholder="wifi-card|WIFI:S:Home;T:WPA;P:secret;;&#10;menu-link|https://menu.com&#10;plain-text-value" rows="10"></textarea>
+                <div class="batch-field">
+                    <div class="batch-input-grid">
+                        <div class="field">
+                            <label for="labelsInput">Labels / Filenames (Optional, one per line)</label>
+                            <textarea id="labelsInput" placeholder="wifi-card&#10;menu-link" rows="10"></textarea>
+                        </div>
+                        <div class="field">
+                            <label for="payloadsInput">Target URLs / Data (Required, one per line)</label>
+                            <textarea id="payloadsInput" placeholder="WIFI:S:Home;T:WPA;P:secret;;&#10;https://menu.com" rows="10"></textarea>
+                        </div>
+                    </div>
+                    <div class="batch-options">
+                        <div class="field">
+                            <label for="labelPrefix">Label Prefix <span class="helper-text">Used when a label is missing</span></label>
+                            <input id="labelPrefix" type="text" value="qr-" autocomplete="off">
+                        </div>
+                        <span id="syncStatus" class="sync-status" role="status" aria-live="polite">0 URLs | 0 Labels (Ready)</span>
+                    </div>
                 </div>
 
                 <div class="section-heading settings-heading">
