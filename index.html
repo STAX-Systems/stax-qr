@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -22,9 +22,10 @@
                     <h1>Bulk QR Code Generator</h1>
                     <p class="header-subtitle">Create, customize, and package QR codes in one private workspace.</p>
                 </div>
-            </div>
-            <div class="header-meta">
-                <span class="pro-badge" aria-live="polite">FREE</span>
+            </div>            <div class="header-meta">
+                <a href="https://buy.stripe.com/28EfZagcS0pRayc5e31Nu00" target="_blank" rel="noopener noreferrer" class="pro-badge" style="background:#059669; color:#ffffff; text-decoration:none; padding:4px 10px; border-radius:4px; font-weight:700; font-size:11px; display:inline-flex; align-items:center; gap:4px; cursor:pointer;">
+                    ⚡ UNLOCK PRO (.99)
+                </a>
                 <div class="privacy-badge" aria-label="100% in-browser and air-gapped">
                     <span aria-hidden="true">🔒</span>
                     <span>100% In-Browser &amp; Air-Gapped</span>
@@ -212,69 +213,5 @@
     <script src="../shared/storefront.js"></script>
     <script src="../shared/payment.js"></script>
     <script type="module" src="app.js"></script>
-  <!-- Stripe Commercial Unlock Modal -->
-  <div id="unlock-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-sm">
-    <div class="bg-neutral-900 border border-neutral-700 text-neutral-100 max-w-md w-full p-6 rounded-lg shadow-2xl">
-      <h3 class="text-lg font-bold tracking-tight">Unlock Print-Ready Vector & Sheet Exports</h3>
-      <p class="text-sm text-neutral-400 mt-2">
-        Standard PNG generation is free and client-side. The Pro unlock enables batch vector SVG packaging and auto-paginated Avery label sheets (5160, 5163, and custom grids).
-      </p>
-      <div class="mt-4 p-3 bg-neutral-800 rounded border border-neutral-700 text-xs text-neutral-300 space-y-1">
-        <div>✓ One-time purchase ($4.99) — Lifetime access</div>
-        <div>✓ 100% Client-side — Zero network telemetry</div>
-        <div>✓ Unlimited batch volume</div>
-      </div>
-      <div class="mt-6 flex flex-col gap-2">
-        <a id="stripe-checkout-btn" 
-           href="https://buy.stripe.com/28EfZagcS0pRayc5e31Nu00" 
-           target="_blank" 
-           class="w-full text-center py-2.5 px-4 bg-emerald-600 hover:bg-emerald-500 font-semibold rounded text-sm transition">
-          Purchase Pro Unlock ($4.99)
-        </a>
-        <div class="flex items-center gap-2 mt-2">
-          <input id="unlock-token-input" type="text" placeholder="Paste Stripe Receipt / Key" 
-                 class="flex-1 bg-neutral-800 border border-neutral-700 rounded px-3 py-2 text-xs text-neutral-200 focus:outline-none focus:border-emerald-500">
-          <button id="activate-token-btn" 
-                  class="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-xs font-semibold rounded transition">
-            Unlock
-          </button>
-        </div>
-        <button id="close-modal-btn" class="w-full text-center py-2 text-xs text-neutral-500 hover:text-neutral-400 mt-1">
-          Cancel and return to standard PNGs
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <script>
-  (function() {
-    const STORAGE_KEY = "stax_qr_pro_unlocked";
-    function isPro() { return localStorage.getItem(STORAGE_KEY) === "true"; }
-    function promptUnlock() { document.getElementById("unlock-modal").classList.remove("hidden"); }
-
-    document.getElementById("close-modal-btn").addEventListener("click", () => {
-      document.getElementById("unlock-modal").classList.add("hidden");
-    });
-
-    document.getElementById("activate-token-btn").addEventListener("click", () => {
-      const val = document.getElementById("unlock-token-input").value.trim();
-      if (val.length >= 8) {
-        localStorage.setItem(STORAGE_KEY, "true");
-        document.getElementById("unlock-modal").classList.add("hidden");
-        alert("Pro features unlocked.");
-      }
-    });
-
-    window.exportVectorZip = function(runExport) {
-      if (!isPro()) { promptUnlock(); return; }
-      runExport();
-    };
-
-    window.exportAveryPdf = function(runExport) {
-      if (!isPro()) { promptUnlock(); return; }
-      runExport();
-    };
-  })();
-  </script>
 </body>
 </html>
